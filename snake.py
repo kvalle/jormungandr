@@ -5,7 +5,7 @@ import sys
 import time
 import curses
 
-ROWS = 10
+ROWS = 15
 COLS = 32
 
 snake = [0] * ROWS
@@ -13,7 +13,7 @@ snake = [0] * ROWS
 snake[4] = 7 << (COLS - 3)
 head = { "row": 4, "col": 3 }
 tail = { "row": 4, "col": 0 }
-stack = ["left", "left", "left"]
+stack = ["right", "right", "right"]
 
 def move(pos, direction):
     if direction == "up":
@@ -27,51 +27,24 @@ def move(pos, direction):
     else:
         raise Exception("wrong direction: " + direction)
 
-    return pos   
+    return pos
 
 def set_cell(pos):
     snake[pos["row"]] = snake[pos["row"]] | 1 << (COLS - pos["col"])
 
 def unset_cell(pos):
-    snake[pos["row"]] = snake[pos["row"]] | 1 << (COLS - pos["col"])
-
-
-def remove_tail(row, col):
-    snake[row] = snake[row] & ~(1 << (COLS - col))
+    snake[pos["row"]] = snake[pos["row"]] & ~(1 << (COLS - pos["col"]))
     
-    direction = stack[0]
-    if direction == "right":
-        tail["row"] = tail["row"]
-        tail["col"] = tail["col"] + 1       
-    elif direction == "left":
-        tail["row"] = tail["row"]
-        tail["col"] = tail["col"] - 1
-    elif direction == "up":
-        tail["row"] = tail["row"] - 1
-        tail["col"] = tail["col"]
-    elif direction == "down":
-        tail["row"] = tail["row"] + 1
-        tail["col"] = tail["col"]
-
 def move_snake(direction):
-    global head
-
-    if direction == "right":
-        head = move(head, "right")
-        
-    elif direction == "left":
-        head = move(head, "left")
-
-    elif direction == "up":
-        head = move(head, "up")
-
-    elif direction == "down":
-        head = move(head, "down")
-
-    set_cell(head)
+    global head, tail
 
     stack.append(direction)
-    stack.pop(0)
+
+    head = move(head, direction)
+    set_cell(head)
+
+    unset_cell(tail)
+    tail = move(tail, stack.pop(0))
 
 def to_bits(v):
     return [(v >> i) & 1 for i in reversed(range(COLS))]
@@ -106,19 +79,23 @@ def main(stdscr):
     win.border()
     win.nodelay(True)
 
+    direction = "right"
     while True:
         key = win.getch()
-        if key == ord('a'):
-            move_snake("left")
-        if key == ord('d'):
-            move_snake("right")
-        if key == ord('s'):
-            move_snake("down")
-        if key == ord('w'):
-            move_snake("up")
-
+        if stack[-1] != "right" and key == ord('a'):
+            direction = "left"
+        if stack[-1] != "left" and key == ord('d'):
+            direction = "right"
+        if stack[-1] != "up" and key == ord('s'):
+            direction = "down"
+        if stack[-1] != "down" and key == ord('w'):
+            direction = "up"
+            
+        move_snake(direction)
+        debug(stdscr, str(tail) + "                                    ")
         draw_frame(win)
         win.refresh()
+
         time.sleep(0.1)
 
 
