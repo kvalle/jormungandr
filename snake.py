@@ -13,23 +13,47 @@ snake = [0] * ROWS
 snake[4] = 7 << (COLS - 3)
 head = { "row": 4, "col": 3 }
 tail = { "row": 4, "col": 0 }
-direction = "left"
+stack = ["left", "left", "left"]
 
 def move_head(row, col):
     snake[row] = snake[row] | 1 << (COLS - col)
     head["col"] = col
+    head["row"] = row
 
 def remove_tail(row, col):
     snake[row] = snake[row] & ~(1 << (COLS - col))
-    tail["col"] += 1 # naive
+    
+    direction = stack[0]
+    if direction == "left":
+        tail["row"] = tail["row"]
+        tail["col"] = tail["col"] + 1       
+    elif direction == "right":
+        tail["row"] = tail["row"]
+        tail["col"] = tail["col"] - 1
+    elif direction == "up":
+        tail["row"] = tail["row"] - 1
+        tail["col"] = tail["col"]
+    elif direction == "down":
+        tail["row"] = tail["row"] + 1
+        tail["col"] = tail["col"]
 
-def move_snake():
+def move_snake(direction):
     if direction == "left":
         move_head(head["row"], head["col"] + 1)
         remove_tail(tail["row"], tail["col"])
-
+        
     elif direction == "right":
         pass
+
+    elif direction == "up":
+        pass
+
+    elif direction == "down":
+        move_head(head["row"] + 1, head["col"])
+        remove_tail(tail["row"], tail["col"])
+
+    stack.append(direction)
+    stack.pop(0)
 
 def to_bits(v):
     return [(v >> i) & 1 for i in reversed(range(COLS))]
@@ -60,8 +84,8 @@ def main(stdscr):
     win = curses.newwin(ROWS + 2, COLS + 2, 1, 0)
     win.border()
 
-    for i in range(10):
-        move_snake()
+    for direction in ["left", "left", "down", "left", "left", "down", "left", "left"]:
+        move_snake(direction)
         draw_frame(win)
         win.refresh()
         win.getkey()
