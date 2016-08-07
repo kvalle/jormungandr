@@ -5,8 +5,8 @@ import sys
 import time
 import curses
 
-ROWS = 15
-COLS = 32
+ROWS = 50
+COLS = 80
 
 snake = [0] * ROWS
 
@@ -14,6 +14,10 @@ snake[4] = 7 << (COLS - 3)
 head = { "row": 4, "col": 3 }
 tail = { "row": 4, "col": 0 }
 stack = ["right", "right", "right"]
+
+running = True
+
+score = 0
 
 def move(pos, direction):
     if direction == "up":
@@ -35,14 +39,14 @@ def set_cell(pos):
 def unset_cell(pos):
     snake[pos["row"]] = snake[pos["row"]] & ~(1 << (COLS - pos["col"]))
     
-def move_snake(direction):
-    global head, tail
-
+def move_snake_head(direction):
+    global head
     stack.append(direction)
-
     head = move(head, direction)
     set_cell(head)
-
+    
+def move_snake_tail():
+    global tail
     unset_cell(tail)
     tail = move(tail, stack.pop(0))
 
@@ -70,10 +74,35 @@ def debug(stdscr, text):
     stdscr.addstr(ROWS + 5, 0, text)
     stdscr.refresh()
 
-def main(stdscr):
-    curses.curs_set(False)
-    stdscr.addstr(0, 0, " score: 0")
+def get_direction(key, direction):
+    if stack[-1] != "right" and key == ord('a'):
+        return "left"
+    if stack[-1] != "left" and key == ord('d'):
+        return "right"
+    if stack[-1] != "up" and key == ord('s'):
+        return "down"
+    if stack[-1] != "down" and key == ord('w'):
+        return "up"
+    else:
+        return direction
+
+def collision_detected():
+    return head["row"] < 0 or \
+       head["row"] >= ROWS or \
+       head["col"] < 0 or \
+       head["col"] >= COLS
+
+def update_title(stdscr, score, running=True):
+    stdscr.addstr(0, 0, " score: " + str(score))
+    if not running:
+        stdscr.addstr(0, COLS - 8, "GAME OVER")
     stdscr.refresh()
+
+def main(stdscr):
+    global score, running
+
+    curses.curs_set(False)
+    update_title(stdscr, score=score, running=True)
     
     win = curses.newwin(ROWS + 2, COLS + 2, 1, 0)
     win.border()
@@ -81,22 +110,31 @@ def main(stdscr):
 
     direction = "right"
     while True:
-        key = win.getch()
-        if stack[-1] != "right" and key == ord('a'):
-            direction = "left"
-        if stack[-1] != "left" and key == ord('d'):
-            direction = "right"
-        if stack[-1] != "up" and key == ord('s'):
-            direction = "down"
-        if stack[-1] != "down" and key == ord('w'):
-            direction = "up"
-            
-        move_snake(direction)
-        debug(stdscr, str(tail) + "                                    ")
+        # wait for next frame
+        time.sleep(0.1)
+
+        if not running:
+            update_title(stdscr, score=score, running=False)
+            continue
+
+        # inputs
+        direction = get_direction(win.getch(), direction)
+        
+        # update game
+        score += 1
+        move_snake_head(direction)
+        if collision_detected():
+            running = False
+            continue
+        move_snake_tail()
+        #debug(stdscr, str(tail) + "    score = " + str(score) + "                                ")
+        
+        # outputs
+        update_title(stdscr, score=score)
         draw_frame(win)
         win.refresh()
 
-        time.sleep(0.1)
+        
 
 
 if __name__ == '__main__':
