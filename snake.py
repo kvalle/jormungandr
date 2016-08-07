@@ -15,19 +15,35 @@ head = { "row": 4, "col": 3 }
 tail = { "row": 4, "col": 0 }
 stack = ["left", "left", "left"]
 
-def move_head(row, col):
-    snake[row] = snake[row] | 1 << (COLS - col)
-    head["col"] = col
-    head["row"] = row
+def move(pos, direction):
+    if direction == "up":
+        pos["row"] -= 1
+    elif direction == "down":
+        pos["row"] += 1
+    elif direction == "left":
+        pos["col"] -= 1
+    elif direction == "right":
+        pos["col"] += 1
+    else:
+        raise Exception("wrong direction: " + direction)
+
+    return pos   
+
+def set_cell(pos):
+    snake[pos["row"]] = snake[pos["row"]] | 1 << (COLS - pos["col"])
+
+def unset_cell(pos):
+    snake[pos["row"]] = snake[pos["row"]] | 1 << (COLS - pos["col"])
+
 
 def remove_tail(row, col):
     snake[row] = snake[row] & ~(1 << (COLS - col))
     
     direction = stack[0]
-    if direction == "left":
+    if direction == "right":
         tail["row"] = tail["row"]
         tail["col"] = tail["col"] + 1       
-    elif direction == "right":
+    elif direction == "left":
         tail["row"] = tail["row"]
         tail["col"] = tail["col"] - 1
     elif direction == "up":
@@ -38,19 +54,21 @@ def remove_tail(row, col):
         tail["col"] = tail["col"]
 
 def move_snake(direction):
-    if direction == "left":
-        move_head(head["row"], head["col"] + 1)
-        remove_tail(tail["row"], tail["col"])
+    global head
+
+    if direction == "right":
+        head = move(head, "right")
         
-    elif direction == "right":
-        pass
+    elif direction == "left":
+        head = move(head, "left")
 
     elif direction == "up":
-        pass
+        head = move(head, "up")
 
     elif direction == "down":
-        move_head(head["row"] + 1, head["col"])
-        remove_tail(tail["row"], tail["col"])
+        head = move(head, "down")
+
+    set_cell(head)
 
     stack.append(direction)
     stack.pop(0)
@@ -75,6 +93,9 @@ def draw_frame(win):
     for row in range(ROWS):
         win.addstr(row+1, 1, row_to_str(row))
 
+def debug(stdscr, text):
+    stdscr.addstr(ROWS + 5, 0, text)
+    stdscr.refresh()
 
 def main(stdscr):
     curses.curs_set(False)
@@ -83,12 +104,23 @@ def main(stdscr):
     
     win = curses.newwin(ROWS + 2, COLS + 2, 1, 0)
     win.border()
+    win.nodelay(True)
 
-    for direction in ["left", "left", "down", "left", "left", "down", "left", "left"]:
-        move_snake(direction)
+    while True:
+        key = win.getch()
+        if key == ord('a'):
+            move_snake("left")
+        if key == ord('d'):
+            move_snake("right")
+        if key == ord('s'):
+            move_snake("down")
+        if key == ord('w'):
+            move_snake("up")
+
         draw_frame(win)
         win.refresh()
-        win.getkey()
+        time.sleep(0.1)
+
 
 if __name__ == '__main__':
     try:
