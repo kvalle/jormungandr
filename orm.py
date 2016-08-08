@@ -5,7 +5,7 @@ import sys
 import time
 import curses
 
-ROWS = 50
+ROWS = 20
 COLS = 80
 
 snake = [0] * ROWS
@@ -68,7 +68,7 @@ def draw_frame(win):
     win.border()
     
     for row in range(ROWS):
-        win.addstr(row+1, 1, row_to_str(row))
+        win.addstr(row+1, 1, row_to_str(row), curses.color_pair(2))
 
 def debug(stdscr, text):
     stdscr.addstr(ROWS + 5, 0, text)
@@ -93,14 +93,16 @@ def collision_detected():
        head["col"] >= COLS
 
 def update_title(stdscr, score, running=True):
-    stdscr.addstr(0, 0, " score: " + str(score))
+    stdscr.addstr(0, 0, " jormungandr <> score: " + str(score))
     if not running:
-        stdscr.addstr(0, COLS - 8, "GAME OVER")
+        stdscr.addstr(0, COLS - 8, "GAME OVER", curses.A_BLINK)
     stdscr.refresh()
 
 def main(stdscr):
     global score, running
 
+    curses.init_pair(1, curses.COLOR_RED, curses.COLOR_BLACK)
+    curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)
     curses.curs_set(False)
     update_title(stdscr, score=score, running=True)
     
@@ -135,7 +137,6 @@ def main(stdscr):
         win.refresh()
 
         
-
 
 if __name__ == '__main__':
     try:
