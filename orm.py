@@ -58,14 +58,15 @@ def move_snake_tail(state):
 
 def draw_frame(win, state):
     def row_to_str(row):
-        bs = bits.to_bitlist(state.snake[row], length=COLS)
+        bs = bits.to_bitlist(row, length=COLS)
         bs = map(lambda b: "o" if b==1 else " ", bs)
         return "".join(bs)
 
     win.border()
     
     for row in range(ROWS):
-        win.addstr(row+1, 1, row_to_str(row), curses.color_pair(2))
+        style = curses.color_pair(2) if state.running else curses.A_NORMAL
+        win.addstr(row+1, 1, row_to_str(state.snake[row]), style)
 
 def debug(stdscr, text):
     stdscr.addstr(ROWS + 5, 0, text)
@@ -83,7 +84,7 @@ def get_direction(key, state):
     else:
         return state.direction
 
-def collision_detected(state):
+def detect_collision(state):
     next_head = move(state.head, state.direction)
 
     wall_collision = next_head["row"] < 0 or \
@@ -93,7 +94,8 @@ def collision_detected(state):
     
     tail_collision = state.snake[next_head["row"]] & (1 << (COLS - next_head["col"]))
 
-    return bool(wall_collision or tail_collision)
+    if wall_collision or tail_collision:
+        state.running = False
 
 def update_title(stdscr, state):
     stdscr.addstr(0, 0, " jormungandr <> score: " + str(state.score))
@@ -117,26 +119,21 @@ def main(stdscr):
         # wait for next frame
         time.sleep(0.1)
 
-        if state.running:
-            # inputs
-            key = stdscr.getch()
-            state.direction = get_direction(key, state)
+        # inputs
+        key = stdscr.getch()
+        state.direction = get_direction(key, state)
 
-            # update game
+        # update game
+        detect_collision(state)
+        if state.running:
             state.score += 1
-            if collision_detected(state):
-                state.running = False
-                continue
             move_snake_head(state)
             move_snake_tail(state)
-            
-            # outputs
-            update_title(stdscr, state)
-            draw_frame(win, state)
-            win.refresh()
-            
-        else:
-            update_title(stdscr, state)
+        
+        # outputs
+        update_title(stdscr, state)
+        draw_frame(win, state)
+        win.refresh()
         
 
 if __name__ == '__main__':
