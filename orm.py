@@ -5,15 +5,18 @@ import sys
 import time
 import curses
 
+import bits
+
 ROWS = 20
 COLS = 80
 
 snake = [0] * ROWS
 
-snake[4] = 7 << (COLS - 3)
-head = { "row": 4, "col": 3 }
+start_length = 30
+snake[4] = bits.first_n_set(start_length, length=COLS)
+head = { "row": 4, "col": start_length }
 tail = { "row": 4, "col": 0 }
-stack = ["right", "right", "right"]
+stack = ["right"] * start_length
 
 running = True
 
@@ -52,20 +55,11 @@ def move_snake_tail():
     unset_cell(tail)
     tail = move(tail, stack.pop(0))
 
-def to_bits(v):
-    return [(v >> i) & 1 for i in reversed(range(COLS))]
-
-def from_bits(bitlist):
-    out = 0
-    for bit in bitlist:
-        out = (out << 1) | bit
-    return out
-
 def draw_frame(win):
     def row_to_str(row):
-        bits = to_bits(snake[row])
-        bits = map(lambda b: "o" if b==1 else " ", bits)
-        return "".join(bits)
+        bs = bits.to_bitlist(snake[row], length=COLS)
+        bs = map(lambda b: "o" if b==1 else " ", bs)
+        return "".join(bs)
 
     win.border()
     
