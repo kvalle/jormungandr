@@ -20,6 +20,8 @@ running = True
 score = 0
 
 def move(pos, direction):
+    pos = pos.copy()
+
     if direction == "up":
         pos["row"] -= 1
     elif direction == "down":
@@ -86,11 +88,12 @@ def get_direction(key, direction):
     else:
         return direction
 
-def collision_detected():
-    return head["row"] < 0 or \
-       head["row"] >= ROWS or \
-       head["col"] < 0 or \
-       head["col"] >= COLS
+def collision_detected(direction):
+    next_head = move(head, direction)
+    return next_head["row"] < 0 or \
+       next_head["row"] >= ROWS or \
+       next_head["col"] <= 0 or \
+       next_head["col"] > COLS
 
 def update_title(stdscr, score, running=True):
     stdscr.addstr(0, 0, " jormungandr <> score: " + str(score))
@@ -121,12 +124,11 @@ def main(stdscr):
             
             # update game
             score += 1
-            move_snake_head(direction)
-            if collision_detected():
+            if collision_detected(direction):
                 running = False
                 continue
+            move_snake_head(direction)
             move_snake_tail()
-            #debug(stdscr, str(tail) + "    score = " + str(score) + "                                ")
             
             # outputs
             update_title(stdscr, score=score)
