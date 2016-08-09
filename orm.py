@@ -75,13 +75,13 @@ def debug(stdscr, text):
     stdscr.refresh()
 
 def get_direction(key, direction):
-    if stack[-1] != "right" and key == ord('a'):
+    if stack[-1] != "right" and key == curses.KEY_LEFT:
         return "left"
-    if stack[-1] != "left" and key == ord('d'):
+    if stack[-1] != "left" and key == curses.KEY_RIGHT:
         return "right"
-    if stack[-1] != "up" and key == ord('s'):
+    if stack[-1] != "up" and key == curses.KEY_DOWN:
         return "down"
-    if stack[-1] != "down" and key == ord('w'):
+    if stack[-1] != "down" and key == curses.KEY_UP:
         return "up"
     else:
         return direction
@@ -104,37 +104,37 @@ def main(stdscr):
     curses.init_pair(1, curses.COLOR_RED, curses.COLOR_BLACK)
     curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)
     curses.curs_set(False)
+    stdscr.nodelay(True)
     update_title(stdscr, score=score, running=True)
     
     win = curses.newwin(ROWS + 2, COLS + 2, 1, 0)
     win.border()
-    win.nodelay(True)
 
     direction = "right"
     while True:
         # wait for next frame
         time.sleep(0.1)
 
-        if not running:
+        if running:
+            # inputs
+            direction = get_direction(stdscr.getch(), direction)
+            
+            # update game
+            score += 1
+            move_snake_head(direction)
+            if collision_detected():
+                running = False
+                continue
+            move_snake_tail()
+            #debug(stdscr, str(tail) + "    score = " + str(score) + "                                ")
+            
+            # outputs
+            update_title(stdscr, score=score)
+            draw_frame(win)
+            win.refresh()
+            
+        else:
             update_title(stdscr, score=score, running=False)
-            continue
-
-        # inputs
-        direction = get_direction(win.getch(), direction)
-        
-        # update game
-        score += 1
-        move_snake_head(direction)
-        if collision_detected():
-            running = False
-            continue
-        move_snake_tail()
-        #debug(stdscr, str(tail) + "    score = " + str(score) + "                                ")
-        
-        # outputs
-        update_title(stdscr, score=score)
-        draw_frame(win)
-        win.refresh()
 
         
 
