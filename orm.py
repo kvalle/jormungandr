@@ -84,10 +84,15 @@ def get_direction(key, direction):
 
 def collision_detected(direction):
     next_head = move(head, direction)
-    return next_head["row"] < 0 or \
+
+    wall_collision = next_head["row"] < 0 or \
        next_head["row"] >= ROWS or \
        next_head["col"] <= 0 or \
        next_head["col"] > COLS
+    
+    tail_collision = snake[next_head["row"]] & (1 << (COLS - next_head["col"]))
+
+    return bool(wall_collision or tail_collision)
 
 def update_title(stdscr, score, running=True):
     stdscr.addstr(0, 0, " jormungandr <> score: " + str(score))
