@@ -75,14 +75,16 @@ def get_direction(key, state):
 def detect_collision(state):
     next_head = move(state.head, state.direction)
 
-    wall_collision = next_head["row"] < 0 or \
-       next_head["row"] >= ROWS or \
-       next_head["col"] <= 0 or \
-       next_head["col"] > COLS
+    def wall_collision():
+        return next_head["row"] < 0 or \
+                next_head["row"] >= ROWS or \
+                next_head["col"] <= 0 or \
+                next_head["col"] > COLS
     
-    tail_collision = state.snake[next_head["row"]] & (1 << (COLS - next_head["col"]))
+    def tail_collision():
+        return state.snake[next_head["row"]] & (1 << (COLS - next_head["col"]))
 
-    if wall_collision or tail_collision:
+    if wall_collision() or tail_collision():
         state.running = False
 
 class GameInputs():
