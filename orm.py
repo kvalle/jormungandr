@@ -8,10 +8,27 @@ ROWS = 20
 COLS = 80
 DEBUG = False
 
+class Position:
+    def __init__(self, row, col):
+        self.row = row
+        self.col = col
+
+    def moved(self, direction):
+        if direction == "up":
+            return Position(self.row - 1, self.col)
+        elif direction == "down":
+            return Position(self.row + 1, self.col)
+        elif direction == "left":
+            return Position(self.row, self.col - 1)
+        elif direction == "right":
+            return Position(self.row, self.col + 1)
+        else:
+            raise Exception("bad direction: " + direction)
+
 class GameState:
     snake = None
-    head = {"row": 0, "col": 0}
-    tail = {"row": 0, "col": 0}
+    head = Position(0, 0)
+    tail = Position(0, 0)
     stack = []
     running = True
     score = 0
@@ -21,56 +38,39 @@ class GameState:
         self.snake = [[row == 0 and col <= start_length
             for col in range(COLS)]
             for row in range(ROWS)]
-        self.head["col"] = start_length
+        self.head = Position(0, start_length)
         self.stack = ["right"] * start_length
         self.direction = "right"
 
     def detect_collision(self):
-        next_head = moved(self.head, self.direction)
+        next_head = self.head.moved(self.direction)
 
         def wall_collision():
-            return next_head["row"] < 0 or \
-                next_head["row"] >= ROWS or \
-                next_head["col"] <= 0 or \
-                next_head["col"] > COLS
+            return next_head.row < 0 or \
+                next_head.row >= ROWS or \
+                next_head.col <= 0 or \
+                next_head.col > COLS
         
         def tail_collision():
-            return self.snake[next_head["row"]][next_head["col"]]
+            return self.snake[next_head.row][next_head.col]
 
         if wall_collision() or tail_collision():
             self.running = False
 
     def move_snake_head(self):
         self.stack.append(self.direction)
-        self.head = moved(self.head, self.direction)
+        self.head = self.head.moved(self.direction)
         self.set_cell(self.head)
      
     def move_snake_tail(self):
         self.unset_cell(self.tail)
-        self.tail = moved(self.tail, self.stack.pop(0))
+        self.tail = self.tail.moved(self.stack.pop(0))
 
     def set_cell(self, pos):
-        self.snake[pos["row"]][pos["col"]] = True
+        self.snake[pos.row][pos.col] = True
 
     def unset_cell(self, pos):
-        self.snake[pos["row"]][pos["col"]] = False
-
-
-def moved(pos, direction):
-    pos = pos.copy()
-
-    if direction == "up":
-        pos["row"] -= 1
-    elif direction == "down":
-        pos["row"] += 1
-    elif direction == "left":
-        pos["col"] -= 1
-    elif direction == "right":
-        pos["col"] += 1
-    else:
-        raise Exception("bad direction: " + direction)
-
-    return pos
+        self.snake[pos.row][pos.col] = False
 
 def debug(text):
     global DEBUG
