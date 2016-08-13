@@ -36,15 +36,15 @@ def move(pos, direction):
     elif direction == "right":
         pos["col"] += 1
     else:
-        raise Exception("wrong direction: " + direction)
+        raise Exception("bad direction: " + direction)
 
     return pos
 
 def set_cell(pos, state):
-    state.snake[pos["row"]] = state.snake[pos["row"]] | 1 << (COLS - pos["col"])
+    state.snake[pos["row"]] = bits.setbit(state.snake[pos["row"]], pos["col"], length=COLS)
 
 def unset_cell(pos, state):
-    state.snake[pos["row"]] = state.snake[pos["row"]] & ~(1 << (COLS - pos["col"]))
+    state.snake[pos["row"]] = bits.unsetbit(state.snake[pos["row"]], pos["col"], lengthi=COLS)
     
 def move_snake_head(state):
     state.stack.append(state.direction)
@@ -58,18 +58,6 @@ def move_snake_tail(state):
 def debug(stdscr, text):
     stdscr.addstr(ROWS + 5, 0, text)
     stdscr.refresh()
-
-def get_direction(key, state):
-    if state.stack[-1] != "right" and key == curses.KEY_LEFT:
-        return "left"
-    if state.stack[-1] != "left" and key == curses.KEY_RIGHT:
-        return "right"
-    if state.stack[-1] != "up" and key == curses.KEY_DOWN:
-        return "down"
-    if state.stack[-1] != "down" and key == curses.KEY_UP:
-        return "up"
-    else:
-        return state.direction
 
 def detect_collision(state):
     next_head = move(state.head, state.direction)

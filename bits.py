@@ -16,3 +16,8 @@ def first_n_set(n, length=32):
     """Return a number with the first n bits set"""
     return ((1 << n) - 1) << (length - n)
 
+def setbit(n, bit, length=32):
+    return n | 1 << (length - bit)
+
+def unsetbit(n, bit, length=32):
+    return n & ~(1 << (length - bit))
