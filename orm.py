@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 
+import random
 import time
 import curses
 
@@ -12,6 +13,9 @@ class Position:
     def __init__(self, row, col):
         self.row = row
         self.col = col
+
+    def __eq__(self, other):
+        return self.row == other.row and self.col == other.col
 
     def moved(self, direction):
         if direction == "up":
@@ -29,14 +33,31 @@ class GameState:
     snake = [[False for col in range(COLS)] for row in range(ROWS)]
     head = Position(0, 0)
     tail = Position(0, 0)
+    food = Position(15, 15)
     stack = []
     running = True
     score = 0
     direction = "right"
 
     def __init__(self, start_length=5):
+        random.seed()
         for _ in range(start_length - 1):
             self.move_snake_head()
+
+    def update(self):
+        if self.detect_collision():
+            self.running = False
+
+        if not self.running:
+            return
+
+        if self.detect_eating():
+            self.score += 1
+            self.move_food()
+        else:
+            self.move_snake_tail()
+
+        self.move_snake_head()
 
     def detect_collision(self):
         next_head = self.head.moved(self.direction)
@@ -45,28 +66,37 @@ class GameState:
             return next_head.row < 0 or \
                 next_head.row >= ROWS or \
                 next_head.col <= 0 or \
-                next_head.col > COLS
+                next_head.col >= COLS
         
         def tail_collision():
             return self.snake[next_head.row][next_head.col]
 
-        if wall_collision() or tail_collision():
-            self.running = False
+        return wall_collision() or tail_collision()
+
+    def detect_eating(self):
+        next_head = self.head.moved(self.direction)
+        return self.food == next_head
 
     def move_snake_head(self):
         self.stack.append(self.direction)
         self.head = self.head.moved(self.direction)
-        self.set_cell(self.head)
+        self.snake[self.head.row][self.head.col] = True
      
     def move_snake_tail(self):
-        self.unset_cell(self.tail)
+        self.snake[self.tail.row][self.tail.col] = False
         self.tail = self.tail.moved(self.stack.pop(0))
 
-    def set_cell(self, pos):
-        self.snake[pos.row][pos.col] = True
+    def move_food(self):
+        free = len([cell for row in self.snake for cell in row if not cell])
+        num = random.randrange(0, free)
 
-    def unset_cell(self, pos):
-        self.snake[pos.row][pos.col] = False
+        for row in range(ROWS):
+            for col in range(COLS):
+                if not self.snake[row][col]:
+                    num -= 1
+                if num == 0:
+                    self.food = Position(row, col)
+                    return
 
 def debug(text):
     global DEBUG
@@ -112,10 +142,13 @@ class GameWindow():
     def draw_frame(self, state):
         self.win.border()
         
+        style = curses.color_pair(2) if state.running else curses.A_NORMAL
         for row in range(ROWS):
-            style = curses.color_pair(2) if state.running else curses.A_NORMAL
             row_string = "".join(map(lambda b: "\u25CF" if b else " ", state.snake[row]))
             self.win.addstr(row + 1, 1, row_string, style)
+
+        style = curses.color_pair(1) if state.running else curses.A_NORMAL
+        self.win.addstr(state.food.row + 1, state.food.col + 1, "x", style)        
 
         self.win.refresh()
 
@@ -150,11 +183,7 @@ def main(stdscr):
         state.direction = inputs.get_direction(state)
 
         # update game
-        state.detect_collision()
-        if state.running:
-            state.score += 1
-            state.move_snake_head()
-            state.move_snake_tail()
+        state.update()
         
         # outputs
         window.update_title(state)
