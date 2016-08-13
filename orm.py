@@ -26,7 +26,7 @@ class Position:
             raise Exception("bad direction: " + direction)
 
 class GameState:
-    snake = None
+    snake = [[False for col in range(COLS)] for row in range(ROWS)]
     head = Position(0, 0)
     tail = Position(0, 0)
     stack = []
@@ -34,13 +34,9 @@ class GameState:
     score = 0
     direction = "right"
 
-    def __init__(self, start_length=30):
-        self.snake = [[row == 0 and col <= start_length
-            for col in range(COLS)]
-            for row in range(ROWS)]
-        self.head = Position(0, start_length)
-        self.stack = ["right"] * start_length
-        self.direction = "right"
+    def __init__(self, start_length=5):
+        for _ in range(start_length - 1):
+            self.move_snake_head()
 
     def detect_collision(self):
         next_head = self.head.moved(self.direction)
