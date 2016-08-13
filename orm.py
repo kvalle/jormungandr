@@ -24,7 +24,38 @@ class GameState:
         self.stack = ["right"] * start_length
         self.direction = "right"
 
-def move(pos, direction):
+    def detect_collision(self):
+        next_head = moved(self.head, self.direction)
+
+        def wall_collision():
+            return next_head["row"] < 0 or \
+                next_head["row"] >= ROWS or \
+                next_head["col"] <= 0 or \
+                next_head["col"] > COLS
+        
+        def tail_collision():
+            return self.snake[next_head["row"]] & (1 << (COLS - next_head["col"]))
+
+        if wall_collision() or tail_collision():
+            self.running = False
+
+    def move_snake_head(self):
+        self.stack.append(self.direction)
+        self.head = moved(self.head, self.direction)
+        self.set_cell(self.head)
+     
+    def move_snake_tail(self):
+        self.unset_cell(self.tail)
+        self.tail = moved(self.tail, self.stack.pop(0))
+
+    def set_cell(self, pos):
+        self.snake[pos["row"]] = bits.setbit(self.snake[pos["row"]], pos["col"], length=COLS)
+
+    def unset_cell(self, pos):
+        self.snake[pos["row"]] = bits.unsetbit(self.snake[pos["row"]], pos["col"], length=COLS)
+
+
+def moved(pos, direction):
     pos = pos.copy()
 
     if direction == "up":
@@ -40,39 +71,9 @@ def move(pos, direction):
 
     return pos
 
-def set_cell(pos, state):
-    state.snake[pos["row"]] = bits.setbit(state.snake[pos["row"]], pos["col"], length=COLS)
-
-def unset_cell(pos, state):
-    state.snake[pos["row"]] = bits.unsetbit(state.snake[pos["row"]], pos["col"], lengthi=COLS)
-    
-def move_snake_head(state):
-    state.stack.append(state.direction)
-    state.head = move(state.head, state.direction)
-    set_cell(state.head, state)
- 
-def move_snake_tail(state):
-    unset_cell(state.tail, state)
-    state.tail = move(state.tail, state.stack.pop(0))
-
 def debug(stdscr, text):
     stdscr.addstr(ROWS + 5, 0, text)
     stdscr.refresh()
-
-def detect_collision(state):
-    next_head = move(state.head, state.direction)
-
-    def wall_collision():
-        return next_head["row"] < 0 or \
-            next_head["row"] >= ROWS or \
-            next_head["col"] <= 0 or \
-            next_head["col"] > COLS
-    
-    def tail_collision():
-        return state.snake[next_head["row"]] & (1 << (COLS - next_head["col"]))
-
-    if wall_collision() or tail_collision():
-        state.running = False
 
 class GameInputs():
     def __init__(self, stdscr):
@@ -140,11 +141,11 @@ def main(stdscr):
         state.direction = inputs.get_direction(state)
 
         # update game
-        detect_collision(state)
+        state.detect_collision()
         if state.running:
             state.score += 1
-            move_snake_head(state)
-            move_snake_tail(state)
+            state.move_snake_head()
+            state.move_snake_tail()
         
         # outputs
         window.update_title(state)
