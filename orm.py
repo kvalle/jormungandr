@@ -4,13 +4,12 @@
 import time
 import curses
 
-import bits
-
 ROWS = 20
 COLS = 80
+DEBUG = False
 
 class GameState:
-    snake = [0] * ROWS
+    snake = None
     head = {"row": 0, "col": 0}
     tail = {"row": 0, "col": 0}
     stack = []
@@ -19,7 +18,9 @@ class GameState:
     direction = "right"
 
     def __init__(self, start_length=30):
-        self.snake[0] = bits.first_n_set(start_length, length=COLS)
+        self.snake = [[row == 0 and col <= start_length
+            for col in range(COLS)]
+            for row in range(ROWS)]
         self.head["col"] = start_length
         self.stack = ["right"] * start_length
         self.direction = "right"
@@ -34,7 +35,7 @@ class GameState:
                 next_head["col"] > COLS
         
         def tail_collision():
-            return self.snake[next_head["row"]] & (1 << (COLS - next_head["col"]))
+            return self.snake[next_head["row"]][next_head["col"]]
 
         if wall_collision() or tail_collision():
             self.running = False
@@ -49,10 +50,10 @@ class GameState:
         self.tail = moved(self.tail, self.stack.pop(0))
 
     def set_cell(self, pos):
-        self.snake[pos["row"]] = bits.setbit(self.snake[pos["row"]], pos["col"], length=COLS)
+        self.snake[pos["row"]][pos["col"]] = True
 
     def unset_cell(self, pos):
-        self.snake[pos["row"]] = bits.unsetbit(self.snake[pos["row"]], pos["col"], length=COLS)
+        self.snake[pos["row"]][pos["col"]] = False
 
 
 def moved(pos, direction):
@@ -71,9 +72,10 @@ def moved(pos, direction):
 
     return pos
 
-def debug(stdscr, text):
-    stdscr.addstr(ROWS + 5, 0, text)
-    stdscr.refresh()
+def debug(text):
+    global DEBUG
+    if DEBUG != False:
+        DEBUG += text
 
 class GameInputs():
     def __init__(self, stdscr):
@@ -112,18 +114,29 @@ class GameWindow():
         self.stdscr.refresh()
 
     def draw_frame(self, state):
-        def row_to_str(row):
-            bs = bits.to_bitlist(row, length=COLS)
-            bs = map(lambda b: "\u25CF" if b == 1 else " ", bs)
-            return "".join(bs)
-
         self.win.border()
         
         for row in range(ROWS):
             style = curses.color_pair(2) if state.running else curses.A_NORMAL
-            self.win.addstr(row + 1, 1, row_to_str(state.snake[row]), style)
+            row_string = "".join(map(lambda b: "\u25CF" if b else " ", state.snake[row]))
+            self.win.addstr(row + 1, 1, row_string, style)
 
         self.win.refresh()
+
+    def draw_debug(self):
+        global DEBUG
+
+        if not DEBUG:
+            return
+
+        i = 0
+        while DEBUG:
+            line = DEBUG[:COLS]
+            DEBUG = DEBUG[COLS:]
+            self.stdscr.addstr(ROWS + 5 + i, 0, line)
+            i += 1
+
+        self.stdscr.refresh()
 
 
 def main(stdscr):
@@ -150,6 +163,7 @@ def main(stdscr):
         # outputs
         window.update_title(state)
         window.draw_frame(state)
+        window.draw_debug()
 
 
 if __name__ == '__main__':
