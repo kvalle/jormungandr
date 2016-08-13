@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 
-import sys
 import time
 import curses
 
@@ -12,8 +11,8 @@ COLS = 80
 
 class GameState:
     snake = [0] * ROWS
-    head = { "row": 0, "col": 0 }
-    tail = { "row": 0, "col": 0 }
+    head = {"row": 0, "col": 0}
+    tail = {"row": 0, "col": 0}
     stack = []
     running = True
     score = 0
@@ -77,9 +76,9 @@ def detect_collision(state):
 
     def wall_collision():
         return next_head["row"] < 0 or \
-                next_head["row"] >= ROWS or \
-                next_head["col"] <= 0 or \
-                next_head["col"] > COLS
+            next_head["row"] >= ROWS or \
+            next_head["col"] <= 0 or \
+            next_head["col"] > COLS
     
     def tail_collision():
         return state.snake[next_head["row"]] & (1 << (COLS - next_head["col"]))
@@ -126,14 +125,14 @@ class GameWindow():
     def draw_frame(self, state):
         def row_to_str(row):
             bs = bits.to_bitlist(row, length=COLS)
-            bs = map(lambda b: "o" if b==1 else " ", bs)
+            bs = map(lambda b: "\u25CF" if b == 1 else " ", bs)
             return "".join(bs)
 
         self.win.border()
         
         for row in range(ROWS):
             style = curses.color_pair(2) if state.running else curses.A_NORMAL
-            self.win.addstr(row+1, 1, row_to_str(state.snake[row]), style)
+            self.win.addstr(row + 1, 1, row_to_str(state.snake[row]), style)
 
         self.win.refresh()
 
