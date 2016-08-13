@@ -1,13 +1,22 @@
 #!/usr/bin/env python3
 # encoding: utf-8
 
+import sys
 import random
 import time
 import curses
+from enum import Enum
 
 ROWS = 20
 COLS = 80
-DEBUG = False
+
+class Action(Enum):
+    up = 1
+    down = 2
+    left = 3
+    right = 4
+    new = 5
+    quit = 6
 
 class Position:
     def __init__(self, row, col):
@@ -18,29 +27,30 @@ class Position:
         return self.row == other.row and self.col == other.col
 
     def moved(self, direction):
-        if direction == "up":
+        if direction == Action.up:
             return Position(self.row - 1, self.col)
-        elif direction == "down":
+        elif direction == Action.down:
             return Position(self.row + 1, self.col)
-        elif direction == "left":
+        elif direction == Action.left:
             return Position(self.row, self.col - 1)
-        elif direction == "right":
+        elif direction == Action.right:
             return Position(self.row, self.col + 1)
         else:
             raise Exception("bad direction: " + direction)
 
 class GameState:
-    snake = [[False for col in range(COLS)] for row in range(ROWS)]
-    head = Position(0, 0)
-    tail = Position(0, 0)
-    food = Position(15, 15)
-    stack = []
-    running = True
-    score = 0
-    direction = "right"
-
     def __init__(self, start_length=5):
+        self.snake = [[False for col in range(COLS)] for row in range(ROWS)]
+        self.head = Position(0, 0)
+        self.tail = Position(0, 0)
+        self.food = None
+        self.stack = []
+        self.running = True
+        self.score = 0
+        self.direction = Action.right
+
         random.seed()
+        self.move_food()
         for _ in range(start_length - 1):
             self.move_snake_head()
 
@@ -98,27 +108,27 @@ class GameState:
                     self.food = Position(row, col)
                     return
 
-def debug(text):
-    global DEBUG
-    if DEBUG != False:
-        DEBUG += text
 
 class GameInputs():
     def __init__(self, stdscr):
         self.stdscr = stdscr
         stdscr.nodelay(True)
 
-    def get_direction(self, state):
+    def get_action(self, state):
         key = self.stdscr.getch()
 
-        if state.stack[-1] != "right" and key == curses.KEY_LEFT:
-            return "left"
-        if state.stack[-1] != "left" and key == curses.KEY_RIGHT:
-            return "right"
-        if state.stack[-1] != "up" and key == curses.KEY_DOWN:
-            return "down"
-        if state.stack[-1] != "down" and key == curses.KEY_UP:
-            return "up"
+        if state.stack[-1] != Action.right and key == curses.KEY_LEFT:
+            return Action.left
+        if state.stack[-1] != Action.left and key == curses.KEY_RIGHT:
+            return Action.right
+        if state.stack[-1] != Action.up and key == curses.KEY_DOWN:
+            return Action.down
+        if state.stack[-1] != Action.down and key == curses.KEY_UP:
+            return Action.up
+        if key == ord('q'):
+            return Action.quit
+        if key == ord('n'):
+            return Action.new
         else:
             return state.direction
 
@@ -133,39 +143,31 @@ class GameWindow():
         self.win = curses.newwin(ROWS + 2, COLS + 2, 1, 0)
         self.win.border()
 
-    def update_title(self, state):
+    def draw(self, state):
+        self.stdscr.clear()
+
+        self.draw_title(state)
+        self.draw_frame(state)
+
+    def draw_title(self, state):
         self.stdscr.addstr(0, 0, " jormungandr <> score: " + str(state.score))
         if not state.running:
             self.stdscr.addstr(0, COLS - 8, "GAME OVER", curses.A_BLINK)
+        self.stdscr.addstr(ROWS + 3, 0, " press Q to quit, N to start new game")
         self.stdscr.refresh()
 
     def draw_frame(self, state):
         self.win.border()
         
-        style = curses.color_pair(2) if state.running else curses.A_NORMAL
+        green = curses.color_pair(2) if state.running else curses.A_NORMAL
         for row in range(ROWS):
             row_string = "".join(map(lambda b: "\u25CF" if b else " ", state.snake[row]))
-            self.win.addstr(row + 1, 1, row_string, style)
+            self.win.addstr(row + 1, 1, row_string, green)
 
-        style = curses.color_pair(1) if state.running else curses.A_NORMAL
-        self.win.addstr(state.food.row + 1, state.food.col + 1, "x", style)        
+        red = curses.color_pair(1) if state.running else curses.A_NORMAL
+        self.win.addstr(state.food.row + 1, state.food.col + 1, "x", red)        
 
         self.win.refresh()
-
-    def draw_debug(self):
-        global DEBUG
-
-        if not DEBUG:
-            return
-
-        i = 0
-        while DEBUG:
-            line = DEBUG[:COLS]
-            DEBUG = DEBUG[COLS:]
-            self.stdscr.addstr(ROWS + 5 + i, 0, line)
-            i += 1
-
-        self.stdscr.refresh()
 
 
 def main(stdscr):
@@ -173,23 +175,20 @@ def main(stdscr):
     window = GameWindow(stdscr)
     inputs = GameInputs(stdscr)
 
-    window.update_title(state)
-    
     while True:
-        # wait for next frame
         time.sleep(0.1)
-
-        # inputs
-        state.direction = inputs.get_direction(state)
-
-        # update game
-        state.update()
         
-        # outputs
-        window.update_title(state)
-        window.draw_frame(state)
-        window.draw_debug()
+        action = inputs.get_action(state)
+        if action == Action.quit:
+            sys.exit(0)
+        elif action == Action.new:
+            state = GameState()
+            continue
+        else:
+            state.direction = action
 
+        state.update()
+        window.draw(state)
 
 if __name__ == '__main__':
     try:
