@@ -75,7 +75,7 @@ class GameState:
         def wall_collision():
             return next_head.row < 0 or \
                 next_head.row >= ROWS or \
-                next_head.col <= 0 or \
+                next_head.col < 0 or \
                 next_head.col >= COLS
         
         def tail_collision():
